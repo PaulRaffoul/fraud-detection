@@ -1,0 +1,6 @@
+[project]
+name = "monitor"
+version = "0.1.0"
+description = "Drift detection and monitoring service"
+requires-python = ">=3.11"
+dependencies = []

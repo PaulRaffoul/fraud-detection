@@ -1,0 +1,6 @@
+[project]
+name = "producer"
+version = "0.1.0"
+description = "Synthetic transaction producer with drift mode"
+requires-python = ">=3.11"
+dependencies = []

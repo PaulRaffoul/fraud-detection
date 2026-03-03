@@ -1,0 +1,17 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  # Application services — uncommented as they come online
+  # - job_name: "predictor"
+  #   static_configs:
+  #     - targets: ["predictor:8000"]
+  # - job_name: "monitor"
+  #   static_configs:
+  #     - targets: ["monitor:8001"]

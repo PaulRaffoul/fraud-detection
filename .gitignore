@@ -1,0 +1,32 @@
+# Python / uv
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+
+# Environment
+.env
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# MLflow artifacts (local)
+mlruns/
+mlartifacts/
+
+# Model files
+*.joblib
+
+# Ruff cache
+.ruff_cache/
+
+# Jupyter
+.ipynb_checkpoints/
