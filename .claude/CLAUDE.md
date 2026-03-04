@@ -169,30 +169,129 @@ Use these defaults unless blocked:
 IMPORTANT: Implementation must follow the “Rules of Engagement” step-by-step format.
 Do not skip ahead.
 
-### Phase 0 (FIRST TASK) — Scaffolding
+### Phase 0 (FIRST TASK) — Scaffolding ✅
 Create the folder structure and placeholder files exactly as specified.
 No functionality yet. Keep it minimal.
 
-### Phase 1 — Compose Infrastructure First
+### Phase 1 — Compose Infrastructure First ✅
 Bring up redpanda, redis, mlflow, prometheus, grafana with docker compose.
 
-### Phase 2 — Producer with Drift Mode
+### Phase 2 — Producer with Drift Mode ✅
 Stream synthetic transactions to `transactions_raw`.
+- `transaction.py`: Pure function generating synthetic data with log-normal amounts, weighted card types, configurable fraud rates.
+- `main.py`: Kafka producer loop with exponential backoff retry, structured JSON logging, Prometheus counters.
+- Drift mode shifts distributions (higher amounts, more Amex, 8% fraud rate) via `DRIFT_MODE=1` env var.
 
 ### Phase 3 — Redis Feature Store + Tests
-Define and test rolling aggregates.
+Build the feature engineering layer that computes per-user rolling aggregates in Redis.
+
+**Files to create/modify:**
+- `services/predictor/app/features.py` — Single source of truth for feature definitions. Pure functions that:
+  - Update Redis with new transaction data (sorted sets keyed by user_id with timestamp scores)
+  - Query rolling aggregates: `txn_count_1h`, `txn_count_24h`, `avg_amount_24h`
+  - Compute derived features: `amount_vs_avg_ratio` (current amount / user's 24h average)
+- `services/predictor/pyproject.toml` — Add `redis` dependency
+- `tests/test_features.py` — pytest suite using `fakeredis` to verify:
+  - Correct counts over time windows (1h, 24h)
+  - Correct average computation
+  - Ratio computation (including edge case: first transaction for a user)
+  - Expired data is excluded from aggregates
+
+**Why this matters:**
+- Feature consistency: same code runs at training and inference time.
+- Pure function tests catch feature bugs before they poison model predictions.
+- Redis sorted sets with timestamp scores enable efficient window-based expiry.
+- Sub-millisecond Redis reads keep us under the 50ms latency target.
+
+**Key design decisions:**
+- Use Redis sorted sets (ZADD/ZRANGEBYSCORE) — timestamps as scores allow efficient range queries and TTL-like cleanup.
+- Feature functions are pure (take Redis client as argument) — testable with fakeredis, no mocking needed.
+- All feature names defined as constants — prevents train/serve skew from typos.
 
 ### Phase 4 — Predictor Pipeline
-Consume raw, enrich, infer, emit to `transactions_scored`, expose metrics.
+Consume from `transactions_raw`, enrich with Redis features, run inference, emit to `transactions_scored`.
+
+**Files to create/modify:**
+- `services/predictor/app/main.py` — FastAPI app with:
+  - Kafka consumer (confluent-kafka) in a background thread
+  - Message parsing with error handling (skip malformed, log, don't crash)
+  - Feature enrichment via `features.py` + Redis
+  - Model inference (joblib-loaded LogisticRegression)
+  - Produce scored results to `transactions_scored` topic
+  - Health endpoint (`GET /health`)
+- `services/predictor/app/model.py` — Model loading with retry, fallback if model file missing
+- `services/predictor/Dockerfile` — uv-based, copies model artifact
+- `docker-compose.yml` — Add predictor service, depends_on redis + redpanda
+- `infrastructure/prometheus/prometheus.yml` — Add predictor scrape target
+
+**Prometheus metrics exposed:**
+- `predictor_messages_consumed_total` — throughput counter
+- `predictor_inference_latency_seconds` — histogram (must be < 50ms p99)
+- `predictor_predictions_total{label=fraud|legit}` — prediction distribution
+
+**Key design decisions:**
+- At-least-once consumption (commit after processing, not before)
+- Graceful degradation: if Redis is down, skip enrichment and use default features
+- If model file is missing, log error and return neutral score (0.5)
 
 ### Phase 5 — MLflow Training + Registry Logging
-Notebook + model artifact export + schema logging.
+Train the baseline model, log it to MLflow, export artifact for the predictor.
+
+**Files to create/modify:**
+- `notebooks/train_model.ipynb` — Jupyter notebook that:
+  - Generates a training dataset using `transaction.py` + `features.py`
+  - Trains LogisticRegression (scikit-learn)
+  - Logs parameters, metrics (accuracy, precision, recall, F1, AUC) to MLflow
+  - Logs the feature schema (ordered feature names + types) as an MLflow artifact
+  - Exports `model.joblib` to `services/predictor/model/`
+  - Registers the model in MLflow Model Registry
+- `services/predictor/model/model.joblib` — Trained model artifact (gitignored, built by notebook)
+
+**Why this matters:**
+- MLflow provides experiment lineage — which model is in production, what metrics it achieved, what features it used.
+- Feature schema artifact ensures train/serve consistency is auditable.
+- Notebook format makes it easy to iterate and visualize results.
 
 ### Phase 6 — Drift Monitor + Alerting + Dashboard
-Compute drift, export metrics, alert in Prometheus, visualize in Grafana.
+Detect distribution drift in incoming transactions and surface it through metrics and dashboards.
+
+**Files to create/modify:**
+- `services/monitor/app/main.py` — FastAPI service that:
+  - Consumes from `transactions_scored` (or `transactions_raw`)
+  - Maintains sliding windows of `amount` and `card_type` distributions
+  - Computes PSI (Population Stability Index) for `amount` over `DRIFT_WINDOW_MINUTES`
+  - Computes categorical distribution shift for `card_type`
+  - Exposes drift metrics via `/metrics` for Prometheus
+- `services/monitor/app/drift.py` — Pure functions for PSI calculation and distribution comparison
+- `services/monitor/Dockerfile` — uv-based container
+- `services/monitor/pyproject.toml` — Dependencies
+- `infrastructure/grafana/dashboards/` — Pre-provisioned Grafana dashboard JSON:
+  - System panel: message throughput, consumer lag, inference latency
+  - ML panel: prediction distribution (fraud vs legit over time)
+  - Drift panel: PSI gauge, card_type distribution bars, drift alert indicator
+- `infrastructure/prometheus/alert_rules.yml` — Alert rule: fire when `drift_psi > DRIFT_PSI_THRESHOLD`
+- `docker-compose.yml` — Add monitor service
+
+**Key design decisions:**
+- PSI > 0.2 = significant drift (industry standard threshold)
+- Monitor is a separate service (not inside predictor) — separation of concerns, can scale independently
+- Grafana dashboards are provisioned via JSON files (reproducible, version-controlled)
 
 ### Phase 7 — CI/CD Quality Gate
-GitHub Actions: lint + mypy (predictor) + pytest.
+Automated quality checks on every push via GitHub Actions.
+
+**Files to create/modify:**
+- `.github/workflows/ci.yml` — GitHub Actions workflow that runs:
+  - `ruff check` + `ruff format --check` — linting and formatting
+  - `mypy services/predictor/` — type checking for the predictor service
+  - `pytest tests/` — feature engineering tests + predictor message parsing tests
+- Matrix: runs on Python 3.11
+- Uses `uv` for dependency installation in CI
+
+**What must pass:**
+- Zero ruff errors
+- Zero mypy errors in predictor
+- All pytest tests green
 
 ---
 

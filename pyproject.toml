@@ -17,6 +17,7 @@ dev = [
     "ruff>=0.8",
     "mypy>=1.11",
     "pytest>=8.0",
+    "fakeredis>=2.21",
 ]
 
 [tool.ruff]
