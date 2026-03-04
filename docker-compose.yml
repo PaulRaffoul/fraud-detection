@@ -23,7 +23,7 @@ services:
     volumes:
       - redpanda_data:/var/lib/redpanda/data
     healthcheck:
-      test: ["CMD-SHELL", "rpk cluster health | grep -q 'HEALTHY'"]
+      test: ["CMD-SHELL", "rpk cluster health | grep -q 'Healthy:.*true'"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -110,6 +110,28 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  # ---------------------------------------------------------------------------
+  # Producer — Synthetic transaction generator
+  # ---------------------------------------------------------------------------
+  producer:
+    build:
+      context: ./services/producer
+    container_name: producer
+    env_file: .env
+    environment:
+      - KAFKA_BROKERS=${KAFKA_BROKERS:-redpanda:9092}
+      - KAFKA_TOPIC_RAW=${KAFKA_TOPIC_RAW:-transactions_raw}
+      - PRODUCER_RATE_PER_SEC=${PRODUCER_RATE_PER_SEC:-20}
+      - DRIFT_MODE=${DRIFT_MODE:-0}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - PRODUCER_METRICS_PORT=8002
+    ports:
+      - "8002:8002"
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    restart: unless-stopped
 
 volumes:
   redpanda_data:

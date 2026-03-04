@@ -8,6 +8,11 @@ scrape_configs:
     static_configs:
       - targets: ["localhost:9090"]
 
+  # Producer service
+  - job_name: "producer"
+    static_configs:
+      - targets: ["producer:8002"]
+
   # Application services — uncommented as they come online
   # - job_name: "predictor"
   #   static_configs:
