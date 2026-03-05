@@ -5,4 +5,11 @@ description = "Real-time fraud prediction service"
 requires-python = ">=3.11"
 dependencies = [
     "redis>=5.0",
+    "confluent-kafka>=2.5",
+    "fastapi>=0.111",
+    "uvicorn>=0.30",
+    "prometheus-client>=0.21",
+    "joblib>=1.4",
+    "numpy>=1.26",
+    "scikit-learn>=1.5",
 ]
