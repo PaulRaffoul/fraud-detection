@@ -1,0 +1,20 @@
+{
+  "feature_names": [
+    "txn_count_1h",
+    "txn_count_24h",
+    "avg_amount_24h",
+    "amount_vs_avg_ratio",
+    "amount",
+    "hour_of_day",
+    "day_of_week"
+  ],
+  "feature_types": {
+    "txn_count_1h": "float64",
+    "txn_count_24h": "float64",
+    "avg_amount_24h": "float64",
+    "amount_vs_avg_ratio": "float64",
+    "amount": "float64",
+    "hour_of_day": "int64",
+    "day_of_week": "int64"
+  }
+}

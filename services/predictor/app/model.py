@@ -11,6 +11,7 @@ from typing import Any
 
 import joblib
 import numpy as np
+import pandas as pd
 
 logger = logging.getLogger("predictor")
 
@@ -58,7 +59,7 @@ def predict(model: Any, features: dict[str, float], feature_names: list[str]) ->
         return 0.5
 
     # Build feature vector in the exact order the model was trained on
-    X = np.array([[features.get(name, 0.0) for name in feature_names]])
+    X = pd.DataFrame([[features.get(name, 0.0) for name in feature_names]], columns=feature_names)
 
     try:
         # predict_proba returns [[p_legit, p_fraud]]

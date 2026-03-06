@@ -14,8 +14,8 @@ RUN uv pip install --system --no-cache -r pyproject.toml
 # Copy application code
 COPY app/ ./app/
 
-# Create model directory (will be empty until Phase 5 training)
-RUN mkdir -p /app/model
+# Copy model artifact (if present; empty dir with .gitkeep otherwise)
+COPY model/ /app/model/
 
 EXPOSE 8000
 

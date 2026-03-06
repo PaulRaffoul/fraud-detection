@@ -20,7 +20,15 @@ from confluent_kafka import Consumer, KafkaError, KafkaException, Producer
 from fastapi import FastAPI
 from prometheus_client import Counter, Histogram, make_asgi_app
 
-from .features import FEATURE_NAMES, get_user_features, update_user_features
+from .features import (
+    FEAT_AMOUNT,
+    FEAT_DAY_OF_WEEK,
+    FEAT_HOUR_OF_DAY,
+    FEATURE_NAMES,
+    REDIS_FEATURE_NAMES,
+    get_user_features,
+    update_user_features,
+)
 from .model import load_model, predict
 
 # ---------------------------------------------------------------------------
@@ -198,9 +206,14 @@ def _process_message(
             features = get_user_features(redis_client, user_id, amount)
         except redis.ConnectionError:
             logger.warning(f"Redis unavailable for txn {txn_id}. Using default features.")
-            features = {name: 0.0 for name in FEATURE_NAMES}
+            features = {name: 0.0 for name in REDIS_FEATURE_NAMES}
     else:
         features = {name: 0.0 for name in FEATURE_NAMES}
+
+    # Add raw transaction fields to the feature vector
+    features[FEAT_AMOUNT] = amount
+    features[FEAT_HOUR_OF_DAY] = float(txn.get("hour_of_day", 0))
+    features[FEAT_DAY_OF_WEEK] = float(txn.get("day_of_week", 0))
 
     # 3. Predict
     fraud_score = predict(model, features, FEATURE_NAMES)

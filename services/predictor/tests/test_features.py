@@ -9,7 +9,7 @@ from app.features import (
     FEAT_AVG_AMOUNT_24H,
     FEAT_TXN_COUNT_1H,
     FEAT_TXN_COUNT_24H,
-    FEATURE_NAMES,
+    REDIS_FEATURE_NAMES,
     get_user_features,
     update_user_features,
 )
@@ -175,7 +175,7 @@ class TestEdgeCases:
     def test_feature_names_all_present(self, redis_client):
         """Every call should return all feature names."""
         features = get_user_features(redis_client, "user_0001", current_amount=50.0)
-        assert set(features.keys()) == set(FEATURE_NAMES)
+        assert set(features.keys()) == set(REDIS_FEATURE_NAMES)
 
     def test_large_spike_ratio(self, redis_client):
         """A massive spike should produce a high ratio."""

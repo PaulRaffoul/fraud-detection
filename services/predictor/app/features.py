@@ -25,13 +25,24 @@ FEAT_TXN_COUNT_1H = "txn_count_1h"
 FEAT_TXN_COUNT_24H = "txn_count_24h"
 FEAT_AVG_AMOUNT_24H = "avg_amount_24h"
 FEAT_AMOUNT_VS_AVG_RATIO = "amount_vs_avg_ratio"
+FEAT_AMOUNT = "amount"
+FEAT_HOUR_OF_DAY = "hour_of_day"
+FEAT_DAY_OF_WEEK = "day_of_week"
 
-# Ordered list of feature names fed to the model
-FEATURE_NAMES = [
+# Rolling aggregate features computed from Redis
+REDIS_FEATURE_NAMES = [
     FEAT_TXN_COUNT_1H,
     FEAT_TXN_COUNT_24H,
     FEAT_AVG_AMOUNT_24H,
     FEAT_AMOUNT_VS_AVG_RATIO,
+]
+
+# Full ordered list of feature names fed to the model
+# Rolling aggregates (from Redis) + raw transaction fields
+FEATURE_NAMES = REDIS_FEATURE_NAMES + [
+    FEAT_AMOUNT,
+    FEAT_HOUR_OF_DAY,
+    FEAT_DAY_OF_WEEK,
 ]
 
 # ---------------------------------------------------------------------------
