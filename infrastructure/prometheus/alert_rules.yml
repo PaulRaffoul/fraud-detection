@@ -1,0 +1,20 @@
+groups:
+  - name: drift_alerts
+    rules:
+      - alert: AmountDistributionDrift
+        expr: monitor_drift_psi_amount > 0.2
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Amount distribution drift detected"
+          description: "PSI score {{ $value | printf \"%.4f\" }} exceeds threshold 0.2. The transaction amount distribution has shifted significantly from the reference baseline."
+
+      - alert: HighFraudRate
+        expr: monitor_drift_fraud_rate > 0.05
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Fraud rate spike detected"
+          description: "Fraud rate {{ $value | printf \"%.2%\" }} exceeds 5% threshold in the recent scoring window."

@@ -1861,6 +1861,20 @@ wheels = [
 name = "monitor"
 version = "0.1.0"
 source = { virtual = "services/monitor" }
+dependencies = [
+    { name = "confluent-kafka" },
+    { name = "fastapi" },
+    { name = "prometheus-client" },
+    { name = "uvicorn" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "confluent-kafka", specifier = ">=2.5" },
+    { name = "fastapi", specifier = ">=0.111" },
+    { name = "prometheus-client", specifier = ">=0.21" },
+    { name = "uvicorn", specifier = ">=0.30" },
+]
 
 [[package]]
 name = "mypy"

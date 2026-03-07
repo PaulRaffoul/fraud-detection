@@ -217,7 +217,7 @@ def _process_message(
 
     # 3. Predict
     fraud_score = predict(model, features, FEATURE_NAMES)
-    label = "fraud" if fraud_score >= 0.5 else "legit"
+    label = "fraud" if fraud_score > 0.5 else "legit"
 
     elapsed = time.perf_counter() - start
     INFERENCE_LATENCY.observe(elapsed)
