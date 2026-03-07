@@ -69,9 +69,29 @@ docker logs predictor 2>&1 | head -10
 # Should show: "Model loaded from /app/model/model.joblib"
 ```
 
-### Model performance note
+### How fraud is generated
 
-The baseline model has near-random performance (AUC ~0.47) because our synthetic data generates fraud labels **independently** of the features — there's no real signal. This is expected and fine for validating the pipeline. With real data or engineered correlations, the model would learn meaningful patterns.
+Fraud probability is **feature-dependent**, not random. The producer's `_fraud_probability()` function applies risk multipliers on a low base rate (~0.3%):
+
+| Risk factor | Multiplier | Rationale |
+|-------------|------------|-----------|
+| Amount > $500 | 6x | Fraudsters drain accounts with large purchases |
+| Amount > $200 | 3x | Moderately suspicious |
+| Hour 0-5 AM | 4x | Stolen cards used when victim is asleep |
+| Electronics or travel merchant | 3x | High-value, easily resold goods |
+
+Multipliers stack (e.g., a $600 electronics purchase at 3 AM = 0.3% x 6 x 3 x 4 = 21.6% fraud chance). This gives the model real signal to learn from while keeping the overall fraud rate realistic (~1%).
+
+### Model performance
+
+| Metric | Value |
+|--------|-------|
+| ROC AUC | 0.74 |
+| Recall | 0.72 |
+| Accuracy | 0.64 |
+| Precision | 0.02 |
+
+Low precision is expected with ~1% fraud prevalence and `class_weight="balanced"` — the model trades false positives for higher recall (catching more actual fraud). In production, the threshold would be tuned based on business cost of false positives vs missed fraud.
 
 ### Output files
 

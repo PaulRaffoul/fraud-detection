@@ -59,17 +59,20 @@ Calls `update_user_features()` from `features.py`:
 - Refreshes a 48h TTL on the key
 
 ### 3. Get Features (read path)
-Calls `get_user_features()` from `features.py`. Computes 4 rolling aggregates:
+Calls `get_user_features()` from `features.py`. Computes 4 rolling aggregates from Redis. Then merges 3 raw transaction fields. The full 7-feature vector:
 
-| Feature | Description |
-|---------|-------------|
-| `txn_count_1h` | Number of transactions by this user in the last hour |
-| `txn_count_24h` | Number of transactions in the last 24 hours |
-| `avg_amount_24h` | Average transaction amount over 24 hours |
-| `amount_vs_avg_ratio` | Current amount / 24h average (spike detector). Defaults to 1.0 for first-time users |
+| Feature | Source | Description |
+|---------|--------|-------------|
+| `txn_count_1h` | Redis | Number of transactions by this user in the last hour |
+| `txn_count_24h` | Redis | Number of transactions in the last 24 hours |
+| `avg_amount_24h` | Redis | Average transaction amount over 24 hours |
+| `amount_vs_avg_ratio` | Redis | Current amount / 24h average (spike detector). Defaults to 1.0 for first-time users |
+| `amount` | Transaction | Raw transaction amount |
+| `hour_of_day` | Transaction | Hour when the transaction occurred (0-23) |
+| `day_of_week` | Transaction | Day of the week (0=Monday, 6=Sunday) |
 
 ### 4. Predict
-Passes the feature vector (in a fixed order defined by `FEATURE_NAMES`) to the model via `predict()`. The model returns a fraud probability between 0.0 and 1.0. If score >= 0.5, the label is `fraud`; otherwise `legit`.
+Passes the 7-feature vector (in a fixed order defined by `FEATURE_NAMES`) to the model via `predict()`. The model returns a fraud probability between 0.0 and 1.0. If score >= 0.5, the label is `fraud`; otherwise `legit`.
 
 ### 5. Produce Scored Result
 Emits the original transaction enriched with `fraud_score`, `fraud_label`, `features`, and `inference_latency_ms` to the `transactions_scored` topic.
@@ -77,21 +80,24 @@ Emits the original transaction enriched with `fraud_score`, `fraud_label`, `feat
 Example scored output:
 ```json
 {
-  "transaction_id": "5e8cea82-...",
-  "user_id": "user_0369",
-  "amount": 57.03,
-  "card_type": "Discover",
-  "merchant_category": "restaurant",
+  "transaction_id": "817a2887-...",
+  "user_id": "user_0106",
+  "amount": 732.47,
+  "card_type": "Mastercard",
+  "merchant_category": "travel",
   "is_fraud": false,
-  "fraud_score": 0.5,
+  "fraud_score": 0.740889,
   "fraud_label": "fraud",
   "features": {
-    "txn_count_1h": 1.0,
-    "txn_count_24h": 1.0,
-    "avg_amount_24h": 57.03,
-    "amount_vs_avg_ratio": 1.0
+    "txn_count_1h": 79.0,
+    "txn_count_24h": 440.0,
+    "avg_amount_24h": 70.08,
+    "amount_vs_avg_ratio": 10.45,
+    "amount": 732.47,
+    "hour_of_day": 20.0,
+    "day_of_week": 4.0
   },
-  "inference_latency_ms": 1.41
+  "inference_latency_ms": 2.56
 }
 ```
 
