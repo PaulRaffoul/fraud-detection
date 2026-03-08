@@ -269,14 +269,19 @@ def consumer_loop(
             if msg is None:
                 continue
 
-            if msg.error():
-                if msg.error().code() == KafkaError._PARTITION_EOF:
+            err = msg.error()
+            if err:
+                if err.code() == KafkaError._PARTITION_EOF:
                     continue
-                logger.error(f"Consumer error: {msg.error()}")
+                logger.error(f"Consumer error: {err}")
+                continue
+
+            raw = msg.value()
+            if raw is None:
                 continue
 
             _process_message(
-                raw_value=msg.value(),
+                raw_value=raw,
                 redis_client=redis_client,
                 model=model,
                 kafka_producer=kafka_producer,
