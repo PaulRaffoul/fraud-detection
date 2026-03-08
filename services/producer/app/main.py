@@ -79,15 +79,12 @@ def create_producer(brokers: str) -> Producer:
             producer = Producer(conf)
             # Test connectivity by requesting metadata
             metadata = producer.list_topics(timeout=5)
-            logger.info(
-                f"Connected to Kafka broker(s): {list(metadata.brokers.values())}"
-            )
+            logger.info(f"Connected to Kafka broker(s): {list(metadata.brokers.values())}")
             return producer
         except KafkaError as e:
             wait = min(2**attempt, 30)
             logger.warning(
-                f"Kafka not ready (attempt {attempt}/{max_retries}): {e}. "
-                f"Retrying in {wait}s..."
+                f"Kafka not ready (attempt {attempt}/{max_retries}): {e}. Retrying in {wait}s..."
             )
             time.sleep(wait)
 
@@ -115,9 +112,7 @@ def run():
 
     producer = create_producer(brokers)
 
-    logger.info(
-        f"Producer started — topic={topic}, rate={rate}/s, drift_mode={drift_mode}"
-    )
+    logger.info(f"Producer started — topic={topic}, rate={rate}/s, drift_mode={drift_mode}")
 
     try:
         while True:

@@ -42,13 +42,9 @@ class TestGetUserFeatures:
         """After recording one transaction, features should reflect it."""
         now = time.time()
 
-        update_user_features(
-            redis_client, "user_0001", "txn_1", amount=100.0, timestamp=now - 60
-        )
+        update_user_features(redis_client, "user_0001", "txn_1", amount=100.0, timestamp=now - 60)
 
-        features = get_user_features(
-            redis_client, "user_0001", current_amount=200.0, timestamp=now
-        )
+        features = get_user_features(redis_client, "user_0001", current_amount=200.0, timestamp=now)
 
         assert features[FEAT_TXN_COUNT_1H] == 1.0
         assert features[FEAT_TXN_COUNT_24H] == 1.0
@@ -59,19 +55,11 @@ class TestGetUserFeatures:
         """Average should correctly aggregate multiple transactions."""
         now = time.time()
 
-        update_user_features(
-            redis_client, "user_0001", "txn_1", amount=100.0, timestamp=now - 120
-        )
-        update_user_features(
-            redis_client, "user_0001", "txn_2", amount=200.0, timestamp=now - 60
-        )
-        update_user_features(
-            redis_client, "user_0001", "txn_3", amount=300.0, timestamp=now - 30
-        )
+        update_user_features(redis_client, "user_0001", "txn_1", amount=100.0, timestamp=now - 120)
+        update_user_features(redis_client, "user_0001", "txn_2", amount=200.0, timestamp=now - 60)
+        update_user_features(redis_client, "user_0001", "txn_3", amount=300.0, timestamp=now - 30)
 
-        features = get_user_features(
-            redis_client, "user_0001", current_amount=150.0, timestamp=now
-        )
+        features = get_user_features(redis_client, "user_0001", current_amount=150.0, timestamp=now)
 
         assert features[FEAT_TXN_COUNT_24H] == 3.0
         assert features[FEAT_AVG_AMOUNT_24H] == 200.0  # (100+200+300)/3
@@ -99,9 +87,7 @@ class TestTimeWindows:
             redis_client, "user_0001", "txn_recent", amount=75.0, timestamp=now - 1800
         )
 
-        features = get_user_features(
-            redis_client, "user_0001", current_amount=60.0, timestamp=now
-        )
+        features = get_user_features(redis_client, "user_0001", current_amount=60.0, timestamp=now)
 
         assert features[FEAT_TXN_COUNT_1H] == 1.0  # only txn_recent
         assert features[FEAT_TXN_COUNT_24H] == 2.0  # both
@@ -119,9 +105,7 @@ class TestTimeWindows:
             redis_client, "user_0001", "txn_fresh", amount=50.0, timestamp=now - 60
         )
 
-        features = get_user_features(
-            redis_client, "user_0001", current_amount=50.0, timestamp=now
-        )
+        features = get_user_features(redis_client, "user_0001", current_amount=50.0, timestamp=now)
 
         assert features[FEAT_TXN_COUNT_24H] == 1.0  # only txn_fresh
         assert features[FEAT_AVG_AMOUNT_24H] == 50.0
@@ -139,13 +123,9 @@ class TestEdgeCases:
         """A $0 transaction should not break ratio calculation."""
         now = time.time()
 
-        update_user_features(
-            redis_client, "user_0001", "txn_1", amount=0.0, timestamp=now - 60
-        )
+        update_user_features(redis_client, "user_0001", "txn_1", amount=0.0, timestamp=now - 60)
 
-        features = get_user_features(
-            redis_client, "user_0001", current_amount=100.0, timestamp=now
-        )
+        features = get_user_features(redis_client, "user_0001", current_amount=100.0, timestamp=now)
 
         # avg is 0.0, so ratio should fall back to 1.0 (neutral)
         assert features[FEAT_AVG_AMOUNT_24H] == 0.0
@@ -155,12 +135,8 @@ class TestEdgeCases:
         """Features for one user must not leak into another user."""
         now = time.time()
 
-        update_user_features(
-            redis_client, "user_0001", "txn_1", amount=500.0, timestamp=now - 60
-        )
-        update_user_features(
-            redis_client, "user_0002", "txn_2", amount=10.0, timestamp=now - 60
-        )
+        update_user_features(redis_client, "user_0001", "txn_1", amount=500.0, timestamp=now - 60)
+        update_user_features(redis_client, "user_0002", "txn_2", amount=10.0, timestamp=now - 60)
 
         features_1 = get_user_features(
             redis_client, "user_0001", current_amount=100.0, timestamp=now

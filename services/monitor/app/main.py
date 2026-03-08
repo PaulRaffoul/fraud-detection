@@ -120,8 +120,7 @@ def create_consumer(max_retries: int = 30) -> Consumer:
         except KafkaException as e:
             wait = min(2**attempt, 30)
             logger.warning(
-                f"Kafka not ready (attempt {attempt}/{max_retries}): {e}. "
-                f"Retrying in {wait}s..."
+                f"Kafka not ready (attempt {attempt}/{max_retries}): {e}. Retrying in {wait}s..."
             )
             time.sleep(wait)
 
@@ -169,9 +168,13 @@ def consumer_loop() -> None:
             if msg is None:
                 # Still check if it's time to recompute drift
                 _maybe_compute_drift(
-                    last_compute_time, compute_interval, psi_threshold,
-                    reference_amounts, recent_amounts,
-                    reference_card_types, recent_card_types,
+                    last_compute_time,
+                    compute_interval,
+                    psi_threshold,
+                    reference_amounts,
+                    recent_amounts,
+                    reference_card_types,
+                    recent_card_types,
                     recent_fraud_labels,
                 )
                 if time.time() - last_compute_time >= compute_interval:
@@ -222,8 +225,10 @@ def consumer_loop() -> None:
             if now - last_compute_time >= compute_interval and reference_full:
                 _compute_and_expose_drift(
                     psi_threshold,
-                    reference_amounts, list(recent_amounts),
-                    reference_card_types, list(recent_card_types),
+                    reference_amounts,
+                    list(recent_amounts),
+                    reference_card_types,
+                    list(recent_card_types),
                     list(recent_fraud_labels),
                 )
                 last_compute_time = now
@@ -252,8 +257,10 @@ def _maybe_compute_drift(
         return
     _compute_and_expose_drift(
         psi_threshold,
-        reference_amounts, list(recent_amounts),
-        reference_card_types, list(recent_card_types),
+        reference_amounts,
+        list(recent_amounts),
+        reference_card_types,
+        list(recent_card_types),
         list(recent_fraud_labels),
     )
 

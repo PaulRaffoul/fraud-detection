@@ -123,7 +123,7 @@ def get_user_features(
 
     # Fetch all transactions in the 24h window
     cutoff_24h = ts - WINDOW_24H
-    raw_members: list[Any] = redis_client.zrangebyscore(key, cutoff_24h, "+inf", withscores=True)
+    raw_members: list[Any] = redis_client.zrangebyscore(key, cutoff_24h, "+inf", withscores=True)  # type: ignore[assignment]
 
     # Parse members: list of (json_string, score)
     txns_24h: list[dict[str, Any]] = []

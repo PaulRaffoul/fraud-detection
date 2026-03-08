@@ -28,7 +28,7 @@ def load_model(model_path: str | None = None) -> Any:
     Returns:
         The loaded model, or None if the file doesn't exist.
     """
-    path = model_path or os.getenv("MODEL_PATH", "/app/model/model.joblib")
+    path: str = model_path or os.getenv("MODEL_PATH", "/app/model/model.joblib")  # type: ignore[assignment]
 
     if not os.path.exists(path):
         logger.warning(f"Model file not found at {path}. Using fallback score 0.5.")
